@@ -1,0 +1,20 @@
+# Data — never commit, except test fixtures
+data/*
+!data/.gitkeep
+*.duckdb
+*.parquet
+*.csv
+!tests/fixtures/
+!tests/fixtures/*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Env & editor
+.env
+.vscode/
+.DS_Store
