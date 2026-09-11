@@ -70,5 +70,7 @@ reported volumes, by how long, and where does the relationship break?
 
 ## Methodology
 
-Design decisions trace to `docs/literature.md`. When choosing thresholds or
-algorithms, check there first and add a line when a paper informs a choice.
+Threshold and algorithm choices live in `docs/decisions.md`, with sources in
+`docs/literature.md`. Before implementing anything involving a threshold or
+detection rule, read `docs/decisions.md`. If a needed decision isn't recorded
+there, stop and ask rather than inventing a value.
