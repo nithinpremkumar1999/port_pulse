@@ -1,0 +1,7 @@
+AIS protocol fundamentals. Message types 1/2/3 versus type 5, Class A versus B, and the reporting-rate schedule — the primer in the Malta paper is a good start, noting roughly every 2–10 seconds underway and every 6 minutes at anchor. This directly determines your gap threshold, because you need to know what a normal silence looks like before deciding what an abnormal one is. Highest priority.
+
+The NMEA ship-type and navigational-status code tables. An hour, and you'll stop guessing.
+
+LNG shipping operations. Vessel classes and cargo sizes, ballast versus laden voyages, boil-off, typical loading duration, how export terminals schedule berths. You'll be asked about this in interviews and it's what makes your metric interpretable rather than just computed.
+
+Geodesy basics. WGS84, why a degree of longitude shrinks with latitude, haversine versus the flat-earth approximation in your Query 4. At Gulf Coast latitudes over port-scale distances the approximation is fine — but know why it's fine rather than that it happened to work.

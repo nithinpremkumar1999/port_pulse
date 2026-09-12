@@ -1,0 +1,7 @@
+Identifying LNG carriers without a type code — dimensions, berth, roster, or all three
+Loading-cycle detection: ballast arrival → berth → laden departure. Is Draft actually updated by these crews, and does the ballast/laden difference show up in the data?
+Estimating cargo volume: vessel capacity from dimensions, or draft change, or a fixed per-class constant
+Multi-day call state (unchanged — still the key architectural constraint)
+Whether to keep a congestion metric at all, and if so only for Houston
+Validation design: cargo-level matching against DOE, plus aggregate comparison against EIA
+Handling the Freeport outage as an out-of-sample test — if your model was fitted on normal operations, does it correctly show the cliff?

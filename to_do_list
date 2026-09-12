@@ -1,0 +1,2 @@
+A SELECT DISTINCT on sentinel candidates over your fixture should be one of your first pytest cases.
+The assertions to write: Every one of these belongs in tests/ against the fixture
