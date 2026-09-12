@@ -249,3 +249,57 @@ a failure.
 Two of four stop conditions are triggered (#1 and #4), plus the Q6 sentinel
 anomaly for sog/cog/heading. Per the brief, this needs a design decision
 before Phase 1 — not made here.
+
+---
+
+## Addendum — box adjusted, Q6 anomaly follow-up
+
+Eastern edge of the box pulled in from `-93.4` to `-93.5` for separation
+from Golden Pass / Port Arthur traffic:
+
+```sql
+CREATE VIEW box AS
+SELECT * FROM read_csv_auto('scratch/ais-2022-03-15.csv.zst')
+WHERE latitude BETWEEN 28.8 AND 29.9 AND longitude BETWEEN -94.2 AND -93.5;
+```
+
+**Box size sanity check** (was 90588 rows / 206 vessels at `-93.4`):
+
+| rows_in_box | vessels |
+|---|---|
+| 88742 | 203 |
+
+**Null counts for sog/cog/heading**
+
+```sql
+SELECT COUNT(*) FILTER (WHERE sog IS NULL)     AS sog_null,
+       COUNT(*) FILTER (WHERE cog IS NULL)     AS cog_null,
+       COUNT(*) FILTER (WHERE heading IS NULL) AS hdg_null,
+       COUNT(*) AS rows
+FROM box;
+```
+
+| sog_null | cog_null | hdg_null | rows |
+|---|---|---|---|
+| 15 | 5449 | 32336 | 88742 |
+
+**Max values for sog/cog/heading**
+
+```sql
+SELECT MAX(sog) AS max_sog, MAX(cog) AS max_cog, MAX(heading) AS max_hdg
+FROM box;
+```
+
+| max_sog | max_cog | max_hdg |
+|---|---|---|
+| 36.5 | 359.9 | 359 |
+
+**Interpretation:** explains the Q6 anomaly. `MAX(cog) = 359.9` and
+`MAX(heading) = 359` never reach the old magic sentinels (360.0, 511) —
+this 2022 product has already scrubbed unavailable sog/cog/heading to
+**NULL** rather than encoding them as magic values. Real missingness is
+substantial (17,336/88,742 ≈ 36.4% of rows null on at least heading alone).
+`draft`'s sentinel handling (`= 0 OR IS NULL`, per Q6) is unaffected by this
+— separate field, separate convention. Silver-layer sentinel logic for this
+product needs `IS NULL` checks for sog/cog/heading, not equality against
+102.3/360.0/511.

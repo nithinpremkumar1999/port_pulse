@@ -12,6 +12,11 @@ filter in the codebase should trace to an entry here via its `LIT-*` ID.
 - When a source does **not** cover something, record it under
   [Gaps in the literature](#gaps-in-the-literature) rather than inventing
   support. An uncited threshold is allowed; a falsely cited one is not.
+- **Observations of our own data are not literature.** They live under
+  [Own observations](#own-observations) with `OBS-*` IDs and are cited the
+  same way. Keeping them separate matters: a published finding and a
+  single-day measurement on one port carry very different weight, and a
+  decision that rests only on an `OBS-*` ID should say so.
 - Numbers in this file are attributed to their source and are **not**
   automatically applicable to port_pulse. Check the "Transplantability" note on
   each entry first — most of these studies use hourly or sub-second data, and
@@ -33,6 +38,8 @@ filter in the codebase should trace to an entry here via its `LIT-*` ID.
 | LIT-FENG-2020 | Full | Port zone time indicators |
 | LIT-ANDROJNA-2021 | Full | SOTDMA physics, spoofing |
 | SRC-NOAA-FAQ | Full | Dataset-specific behaviour (not peer-reviewed) |
+| SRC-DOE-FE746R | Partial | DOE reporting requirements and published fields |
+| OBS-PHASE0 | n/a | Own measurement, Sabine Pass, 2022-03-15 |
 
 ---
 
@@ -675,10 +682,20 @@ days; **total lag from collection to delivery is approximately 145–165 days.**
 `Heading`, `VesselName`, `IMO`, `CallSign`, `VesselType`, `Status`, `Length`,
 `Width`, `Draft`, `Cargo`, `TransceiverClass`.
 
+> **Contradicted by OBS-PHASE0 for the `csv2` product.** The 2022 `csv2`
+> header is snake_case throughout, and two columns are renamed rather than
+> re-cased: `latitude`, `longitude`, `transceiver`. The PascalCase header
+> above describes the retired `.zip` distribution. See D-112.
+
 **Sentinel values.** `COG = 360.0` means unavailable. `SOG = 102.3` means
 unavailable. `Heading = 511` means unavailable (the FAQ describes this as a
 pre-2015 convention, but it is the NMEA standard and **is present in current
 files** — verify against data, not documentation).
+
+> **Contradicted by OBS-PHASE0 for the `csv2` product.** None of these three
+> magic values occurs in the 2022 file; unavailable values are `NULL`. The
+> FAQ's own instruction — verify against data, not documentation — is what
+> caught it. See D-114.
 
 **Vessel identity corrections.**
 
@@ -736,6 +753,185 @@ Cadastre. https://marinecadastre.gov.
 
 ---
 
+## SRC-DOE-FE746R — DOE natural gas import/export reporting
+
+US Department of Energy, Office of Fossil Energy and Carbon Management.
+Form FE-746R, *Monthly Report of Natural Gas Imports and Exports*, and the
+published *Natural Gas Imports and Exports Monthly* report.
+
+**Not peer-reviewed.** An administrative reporting regime. Treat as a second
+measurement of the same physical events, not as ground truth — the data is
+self-reported by authorisation holders as a condition of their export
+authorisation.
+
+**Required fields per cargo.** DOE export orders require each LNG cargo to
+report: the US export terminal, country of destination, **date of departure**,
+**name of the LNG tanker**, supplier, volume in Mcf, price per MMBtu at the
+point of exit, and the duration of the supply agreement.
+
+**No IMO number is published.** Vessel identity is by name only. Any AIS
+reconciliation must join on `vessel_name`.
+
+**Publication.** Transaction-level detail is published as Excel files
+alongside the report — the *U.S. LNG Exports and Re-Exports Transaction
+Details* file carries arrival/departure date, company, docket, activity, gas
+type, mode of transport, supplier, tanker, point of entry/exit, destination
+and volume.
+
+**Report discontinuity.** On **17 November 2023** FECM replaced the *LNG
+Monthly* and the *Natural Gas Imports and Exports Quarterly* with the
+combined *Natural Gas Imports and Exports Monthly*.
+
+**Three categories that are not jetty loadings.**
+
+| Category | Why it must be excluded |
+|---|---|
+| Split cargoes | One physical shipment whose portions have different buyers, suppliers, prices, loading ports or authorisations. Counted as **multiple cargos**, flagged `[*]`. |
+| ISO container exports | LNG in containers, reported separately from LNG by vessel. |
+| Re-exports | Previously-imported LNG, reported in its own table. |
+
+**Confidentiality.** Per-cargo price is not published — only a volume-weighted
+average per point of exit. Volume per cargo *is* published.
+
+**Transplantability.** Directly applicable; this is the validation target.
+See D-140 and D-044.
+
+---
+
+# Own observations
+
+Measurements of port_pulse's own data. These are not literature and carry
+much less weight than a published finding — typically one port on one day.
+Record the sample explicitly so a reader can judge.
+
+## OBS-PHASE0 — Sabine Pass, 2022-03-15, one national file
+
+**Sample.** `ais-2022-03-15.csv.zst`, NOAA `csv2` product, 7,994,666 national
+rows. Clip box latitude 28.8–29.9, longitude −94.2 to −93.5 (final box):
+88,742 rows, 203 vessels, 1.11% of the national file. Ten vessels ≥ 250 m.
+
+**Sample is one ordinary weekday at one terminal.** Nothing here establishes
+a rate, a distribution or a seasonal pattern. It establishes the presence or
+absence of specific conventions, which is what it was run for.
+
+**Schema.** snake_case, 17 columns, `longitude` before `latitude`. Renames
+against SRC-NOAA-FAQ: `LAT`→`latitude`, `LON`→`longitude`,
+`TransceiverClass`→`transceiver`. `heading`, `length`, `width` are `BIGINT`.
+
+**Timestamp is UTC.** File spans 00:00:00–23:59:59. Class B Gulf Coast
+activity troughs at hours 8–11 and peaks 18–23, consistent with UTC−5 local
+daylight; the local-time hypothesis predicts a peak at hours 9–16, which is
+close to the observed minimum.
+
+**Unavailable values are NULL, not magic numbers.** Zero exact matches for
+`sog = 102.3`, `cog = 360.0`, `heading = 511` across 88,742 rows;
+`max(cog) = 359.9`, `max(heading) = 359`, `max(sog) = 36.5`. Null counts:
+`sog` 15 (0.02%), `cog` 5,449 (6.1%), `heading` 32,336 (36.4%).
+
+**Vessel types present among ≥ 250 m vessels.** Only `80` (7 vessels), `84`
+(1), `60` (2, cruise ships). No nulls, zeros or out-of-range codes at this
+size threshold. **LNG carriers appeared under both 80 and 84.**
+
+**Dimensions separate LNG carriers from other tankers; draft does not.**
+
+| Vessel | Type | Length × beam | Draft | Class |
+|---|---|---|---|---|
+| ASKLIPIOS | 80 | 299 × 46 | 9.3 | LNG |
+| MOL HESTIA | 80 | 298 × 48 | 9.4 | LNG |
+| HELLAS ATHINA | 80 | 299 × 46 | 9.6 | LNG |
+| CASTILLO DE CALDELAS | 80 | 297 × 49 | 10.0 | LNG |
+| LA SEINE | 84 | 299 × 46 | 11.6 | LNG |
+| GASLOG GIBRALTAR | 80 | 291 × *null* | *null* | LNG |
+| DUOMO SQUARE | 80 | 250 × 44 | 10.5 | tanker |
+| PACIFIC SAPPHIRE | 80 | 250 × 44 | 13.1 | tanker |
+| CARNIVAL BREEZE | 60 | 305 × 37 | 8.2 | cruise |
+| ADVENTURE OFTHE SEAS | 60 | 311 × 49 | 8.6 | cruise |
+
+Length and beam separate cleanly: 291–299 × 46–49 for LNG against 250 × 44
+for the two non-LNG tankers, no overlap. Draft does not: the full range
+8.2–13.1 m is continuous, and the two LNG carriers furthest apart on draft
+(ASKLIPIOS 9.3, LA SEINE 11.6) differ by load state, not by class. **Draft is
+a load-state variable and cannot classify vessel class.** See D-005.
+
+One of ten large vessels reported neither beam nor draft despite 575
+messages. `ADVENTURE OFTHE SEAS` shows a missing space — relevant to name
+matching under D-140.
+
+**Transceiver split in box.** Class A: 187 vessels, 84,238 messages. Class B:
+19 vessels, 6,350 messages.
+
+**Box sensitivity.** Moving the eastern edge from −93.4 to −93.5 cost 1,846
+rows (2.0%) and 3 vessels (1.5%), while buying 6–8 km of separation from
+Cameron LNG and Calcasieu Pass. See D-006.
+
+**Not established by this run.** Whether any of the above holds for other
+years — SRC-NOAA-FAQ documents format variation by year. Whether draft
+changes across a loading (no vessel ≥ 250 m showed more than one distinct
+draft value in the single day). Any rate, distribution or seasonal claim.
+
+### OBS-PHASE0B — DOE LNG transaction detail, Jan 2016 – Dec 2023
+
+**Sample.** `3. U.S. LNG Exports and Re-Exports Details (Jan 2016 - Dec
+2023).xlsx`, sheet `By Vessel and ISO Container`, 7,241 rows, downloaded
+2026-09-12. Three later cumulative vintages also retrieved, the most current
+covering Jan 2016 – Jun 2026.
+
+**Publication structure.** DOE publishes one **cumulative** file per year
+starting Jan 2016, not one file per year. The current vintage supersedes all
+earlier ones. Observed publication lag ≈ 2 months.
+
+**Schema.** 13 columns. `Arrival/Departure Date` is a **single** column whose
+meaning depends on `Activity`; in this file `Activity` is only `Exports`
+(6,288) or `Re-Exports` (953), never `Imports`, so every row is a departure.
+Zero date nulls. `Volume (MMCF)` confirmed against the Notes sheet.
+
+**No `[*]` split-cargo marker exists** in the file. Searched every string
+column, file-wide and scoped.
+
+**Tanker names.** 473 distinct. Nulls 188/7,241 (2.6%), **all** on
+`Mode of Transport = ISO Container`; zero nulls on the 5,609 `Vessel` rows.
+No leading/trailing whitespace, no internal double spaces, no `M/V`-style
+prefixes. Observed collision pairs: `Castillo De Merida`/`Castillo DeMerida`;
+`GASLOG HONGKONG`/`Gaslog Hong Kong`; `JPS Bora`/`JSP BORA`;
+`Seapack Hispania`/`Seapeak Hispania`; `Vivit Arabia`/`Vivit Arabia LNG`.
+Fleet naming conventions producing edit-distance-1 pairs that are
+**genuinely different vessels**: the `___shu Maru` series and several others.
+
+**Points of exit.** 15 distinct values. `Sabine Pass, LA` (2,464) is clean
+and unambiguous. `Cameron, LA` (792) and `Cameron (Calcasieu Pass), LA` (257)
+are different terminals in the same parish. No point-of-exit value contains
+"Houston".
+
+**Sabine Pass volumes.** Q1 2022 export cargoes cluster in roughly
+2,800–3,860 MMCF. Whole-file `Volume (MMCF)`: mean 2,509.5, median 3,299.1,
+sd 1,482.9 — bimodal, with a second population at 1–30 MMCF corresponding to
+small-scale Caribbean and Puerto Rico distribution, not export-terminal
+cargo.
+
+**Split cargoes, Sabine Pass 2020–2023.** 1,560 rows collapse to 1,482
+loadings on (Tanker, Date, Point of Exit) — 75 multi-row combos, 78 rows
+removed, 5.0%. Summed volume per combo: mean 3,482.1, sd 328.7, min 2,913.3,
+max 5,295.6.
+
+**Q1 2022 Sabine Pass: 109 rows → 105 loadings** (37 / 31 / 37).
+
+**Freeport outage, exact dates.** Last export before the gap **2022-06-07**;
+first export after **2023-02-12**; 250 days. July 2022 – January 2023 are
+zero. February 2023 is a partial recovery (6), reaching 26 by May 2023.
+
+**Cross-checks against OBS-PHASE0.** `Gaslog Gibraltar` — DOE departure
+2022-03-16, present in the AIS box 2022-03-15. `La Seine` — DOE departure
+2022-03-14, present in the AIS box 2022-03-15. Both consistent with berth
+exit plus in-box transit.
+
+**Not established by this run.** Anything about AIS detection. Whether the
+schema holds in the 2024–2026 vintages (D1–D6 were run on the 2016–2023
+file). Loading duration, which is assumed from domain knowledge, not
+measured.
+
+
+---
+
 # Parameter cross-reference
 
 Every numeric threshold appearing in the corpus, with its source. **These are
@@ -757,7 +953,9 @@ adopted.
 | Geohash precision | 9 (4.7 m) | LIT-BERTH-2025 | Not adopted |
 | Observation window for berth derivation | 1 month | LIT-BERTH-2025 | See D-024 |
 | KNN neighbours for status classification | ≥ 300 | LIT-MARTINCIC-2021 | Not adopted, D-026 |
-| AIS↔official port call match window | ± 2 days | LIT-IMF-WORLD-2020 | See D-040 |
+| AIS↔official port call match window | ± 2 days | LIT-IMF-WORLD-2020 | See D-040, D-140 |
+| Minimum vessel length (LNG population) | 250 m | **uncited** — scope choice | See D-117 |
+| Implied-speed quarantine | 40 knots | **uncited** — see D-018 | See D-018 |
 | UTC shift applied to AIS | 6 hours | LIT-IMF-WORLD-2020 | Rejected, D-011 |
 | Weekly series smoothing | 5-term centred MA | LIT-IMF-MALTA-2019 | See D-031 |
 | Port buffer radius | 10 km | LIT-YAN-2022 | See D-013 |

@@ -72,3 +72,19 @@
   - **TransceiverClass:** Filter to Class A (cargo/tanker population), it's the population with mandatory carriage
     under SOLAS, and it's the population least affected by slot contention.
 
+## Data being sent by Class A
+
+- **Position report:** (Type 1/2/3) Position, SOG, COG, heading, rate of turn, nav status, timestamp
+  - **Type 1:** vessel's own SOTDMA schedule fired, majority of the traffic
+  - **Type 2:** a base station assigns the vessel a transmission slot, overriding its self-organised schedule
+  - **Type 3:** the vessel was interrogated and is responding, or is using ITDMA to grab an unscheduled slot
+  Unfortunately, our dataset does not differentiate message types.
+- **Static and voyage-related data (Type 5):** IMO, call sign, name, type, dimensions A/B/C/D, draught,
+  destination, ETA
+- The anchored and moored rates are slower than the downsample, so they pass through untouched.
+  - A vessel underway should produce one row per minute.
+  - A vessel at anchor or moored should produce one row per three minutes — the exact population port_pulse
+    exists to measure.
+  The state determines the expected rate, and the rate is what you use to detect gaps, but you derive the state
+  from the very data the gaps are in. Resolve it by deriving state first on observed points only, then applying
+  the state-conditioned gap rule as a second pass.
