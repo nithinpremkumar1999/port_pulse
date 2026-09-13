@@ -179,6 +179,13 @@ silver and above. Keep that as an architectural requirement.
 
 **Status:** PROPOSED | **Evidence:** OBS-PHASE0, LIT-HARATI-2007, SRC-DOE-FE746R
 
+**Depends on hand-drawn geometry.** The berth polygon this decision makes
+primary is hand-drawn in v1 (D-013) and explicitly not derived (D-024). D-027
+then makes berth-exit timing the headline accuracy number. Taken together, a
+hand-drawn polygon is now load-bearing for the D-240 result — which is
+defensible, but must be stated in the writeup and sensitivity-tested per D-013
+rather than left implicit.
+
 **Do this.** Identify the LNG carrier population in this order:
 
 1. **Berth polygon** — primary. Only LNG carriers berth at an LNG jetty. If
@@ -215,8 +222,15 @@ null-tolerant, and the fraction of the large-vessel population with
 unusable dimensions must be reported per port-month as a coverage ceiling.
 
 **Note.** Draft remains in scope for **loading detection** — a ballast-to-laden
-change across a call is direct evidence of loading. That is a different use
-and is governed by D-053, not by this decision.
+change across a call is direct evidence of loading. That is a different use and
+is not governed by this decision.
+
+**Orphaned by D-153.** This note pointed at D-053, which D-153 resolved. But
+D-153 rules on *volume estimation* only; it says nothing about using a draft
+change as corroborating evidence that a loading occurred. Under D-027 the
+departure event is defined kinematically by berth exit, so nothing in v1
+requires draft for detection. The question is therefore not blocking, but it is
+also not ruled on — it belongs in Open questions, not in a dangling reference.
 
 **Test.** `test_lng_identification_is_null_tolerant`; report dimension
 coverage rate per partition.
@@ -328,8 +342,8 @@ with longitude and daylight saving.
 **Test.** `test_week_assignment_at_local_midnight` — a synthetic departure at
 23:59 and 00:01 port-local on a day and week boundary lands in the expected
 buckets, for at least one US Gulf Coast port (America/Chicago, all four
-terminals in D-006) in both DST and standard time. The original test named US
-West and East Coast ports; under D-006 the Gulf is the only zone in scope.
+terminals in D-106) in both DST and standard time. The original test named US
+West and East Coast ports; under D-106 the Gulf is the only zone in scope.
 
 ---
 
@@ -763,7 +777,7 @@ co-estimate.
 **Consequence under the LNG scope (D-004).** An LNG loading runs 12–24 h at
 `sog < 1.0`, so a single call should produce on the order of 250–500 messages at
 the 3-minute moored rate. A berth dwell with far fewer is a coverage problem,
-not a short loading — and under D-140 the *departure* edge carries the headline
+not a short loading — and under D-240 the *departure* edge carries the headline
 accuracy number, so a gap straddling departure is the expensive failure.
 
 **Secondary use, not a detector.** The moored-to-underway transition triples
@@ -832,7 +846,7 @@ the observed median message rate for that port-week.
 
 **Why.** The duration threshold transfers. The point count does not. Our data is
 downsampled to one minute (SRC-NOAA-FAQ), so 10 points is 10 minutes under
-perfect reception — but under the congestion-correlated message loss of D-019, 10
+perfect reception — but under the congestion-correlated message loss of D-119, 10
 points could span an hour or more. A fixed point-count floor therefore **silently
 raises the effective minimum stop duration exactly in the conditions we care
 about most.** That is a bias toward missing congestion, in the metric designed to
@@ -942,8 +956,14 @@ feature and positional spread carries the classification alone.
 at LNG terminals because loading slots are contracted ahead. The
 classification is still required — it is what separates berth dwell from
 everything else — but a low anchorage count is the expected result, not
-evidence the classifier is broken. Houston (D-006) is where this decision
-earns its keep.
+evidence the classifier is broken.
+
+**Stale under D-106.** This note previously said Houston was where the
+classifier earns its keep. Houston is deferred to v2, so for the whole of v1
+this classification runs only at terminals where anchorage stops are expected
+to be rare. Keep the classifier — it is what separates berth dwell from
+transit — but expect a low anchorage count everywhere in scope, and do not
+tune it toward finding anchorages that are not there.
 
 **Test.** `test_berth_vs_anchorage_classification` on labelled fixture segments;
 `test_heading_null_rate_reported`.
@@ -995,8 +1015,15 @@ highest. A metric built from arrival and departure transitions survives sparse
 sampling, because the transition only needs to be observed once.
 
 **Rejected.** Mean concurrent vessels sampled per minute as the primary metric.
-Acceptable as a secondary metric *if* published alongside the D-019 coverage
+Acceptable as a secondary metric *if* published alongside the D-119 coverage
 series.
+
+**Terminology under D-004 and D-033.** This decision predates the LNG scope and
+says "congestion". Congestion is not a v1 deliverable: D-004's granularity
+output is loading duration and inter-arrival spacing, and D-033 shows berth
+occupancy is saturated at Sabine Pass. The ruling is unchanged and still
+binding — transition-derived metrics over sampled ones — but read "congestion
+metric" as "granularity metric" throughout.
 
 ---
 
@@ -1033,7 +1060,7 @@ metrics, not a lag estimate.
 congestion metric. Report their correlation. If it is materially negative,
 state so and discuss it as a measurement floor on the congestion estimate.
 
-**Why.** This is the project's most serious internal validity threat (see D-019).
+**Why.** This is the project's most serious internal validity threat (see D-119).
 It cannot be eliminated with this data. It can be measured, reported, and
 reasoned about — and doing so is the difference between having read the
 literature and having understood it. No source in the corpus quantifies this
@@ -1153,7 +1180,7 @@ straddles that change. Build the DOE loader for two formats from the start.
 **Status:** PROPOSED | **Evidence:** LIT-ANDROJNA-2021, SRC-NOAA-FAQ, OBS-PHASE0
 
 **Do this.** Emit, per terminal-month, the share of **departure events** whose
-`vessel_name` is null or blank, alongside the D-140 match rate. Report it as a
+`vessel_name` is null or blank, alongside the D-240 match rate. Report it as a
 ceiling on achievable recall. A departure with no name is an unmatchable event,
 not a detector failure, and the two must be reported separately.
 
@@ -1183,11 +1210,11 @@ Three consequences, in increasing severity:
    GIBRALTAR, a known LNG carrier, reported neither beam nor draft across 575
    messages.
 
-**Why this one is load-bearing rather than housekeeping.** D-140 makes
+**Why this one is load-bearing rather than housekeeping.** D-240 makes
 `vessel_name` the sole join key to DOE, because DOE publishes tanker names and
 not IMO numbers. That key is a type 5 field. A departing carrier at the seaward
 edge of the clip box may have position but no name — and a departure is exactly
-where the vessel is heading *away* from the receiver. **The D-140 headline
+where the vessel is heading *away* from the receiver. **The D-240 headline
 accuracy number inherits type 5's fragility**, and without this diagnostic an
 unmatchable event is indistinguishable from a missed one.
 
@@ -1198,7 +1225,7 @@ headline number by construction. If it is ever adopted it must be reported as a
 separate, clearly labelled variant, never as the primary result.
 
 **Test.** `test_departure_events_report_name_null_rate`; publish
-unmatchable-count separately from false-negative count in every D-140 table.
+unmatchable-count separately from false-negative count in every D-240 table.
 
 ### D-041 — Treat IMF PortWatch as a benchmark, not an independent instrument
 
@@ -1329,8 +1356,14 @@ articulate that distinction is the point.
 **Scope narrowed under D-004.** This decision forbids **draught-based**
 estimation, and that prohibition stands. It does not settle whether LNG cargo
 volume can be estimated by other means — per-class capacity constants, or a
-vessel capacity register. That question is D-053 and is open. Do not read
-D-050 as closing it, and do not read D-053 as reopening draught.
+vessel capacity register. That question was D-053 and is now **resolved by
+D-153**: per-vessel historical median with a temporal holdout, benchmarked
+against a global constant. Do not read D-050 as having closed it, and do not
+read D-153 as reopening draught — D-050 stands unchanged.
+
+**Ratification note.** D-153 is `ACCEPTED` and explicitly rests on this
+decision standing. An accepted decision resting on a proposed one is an
+inversion worth closing: either ratify D-050 or demote D-153.
 
 ---
 
@@ -1419,7 +1452,7 @@ The one US case (four fake aids-to-navigation at Ponce de Leon Inlet, Florida,
 2020) is an AtoN spoof, which D-016 excludes anyway. Risk is low but non-zero.
 
 **Revisit if.** A port-week shows an implausible vessel count spike that the
-D-019 coverage diagnostics do not explain. The signature to look for is a burst
+D-119 coverage diagnostics do not explain. The signature to look for is a burst
 of near-sequential MMSIs appearing simultaneously.
 
 ### D-106 — Port scope: three LNG terminals; Houston deferred to v2
@@ -1733,13 +1766,21 @@ v1 requirement.
 and Plaquemines needs no clip-box change at all — it is on the Mississippi,
 outside every box in scope.
 
+**Unblocking condition.** This stays `PROPOSED` until the `csv2/csv2026` index
+is checked. The entry currently argues the window end is *also* forced by the
+145–165 day archive latency, which is inference from D-001, not measurement.
+If the newest available partition is near the start of April 2026, promote to
+`ACCEPTED` and keep both arguments. If the archive reaches June 2026, delete
+the latency paragraph and accept on the Golden Pass argument alone — which
+stands unaided.
+
 **Test.** `test_no_partition_after_window_end`.
 
 ---
 
 ### D-028 — *[Ingest]* Outage detection baselines on the same weekday, never a trailing window
 
-**Status:** PROPOSED | **Evidence:** OBS-PHASE1-PRE
+**Status:** ACCEPTED | **Evidence:** OBS-PHASE1-PRE
 **Area:** ingest and silver — ID borrowed from the detection block, which the
 ID rule directs when the primary block is full.
 
@@ -1792,7 +1833,10 @@ trailing-window median appears in screening code);
 
 ### D-046 — Thresholds are tuned on the clean subset; the degraded-day list is committed before ingest
 
-**Status:** PROPOSED | **Evidence:** OBS-PHASE1-PRE
+**Status:** ACCEPTED | **Evidence:** OBS-PHASE1-PRE
+
+**Ratified before the Q1 2022 fixture was ingested.** That sequencing is the
+substance of this decision, not a formality — see rule 1.
 
 **Do this.** Two rules, both binding on Phase 1.
 
@@ -1837,9 +1881,14 @@ is wrong: the suspect list is withdrawn and the misses are a detector problem.
 Do not defend a pre-registered list against contrary evidence; that would
 convert an honesty mechanism into a rationalisation.
 
-**Test.** `test_tuning_excludes_suspect_days`;
-`test_suspect_list_committed_before_fixture_ingest` (compares git commit
-dates); report accuracy split by day group in every D-240 table.
+**Test.** `test_tuning_excludes_suspect_days`; report accuracy split by day
+group in every D-240 table.
+
+**Not a test — a record.** Rule 1 is enforced by the git history, not by the
+suite. A test comparing commit dates fails on a fresh clone or after a rebase,
+for reasons unrelated to correctness. Instead, record both dates in the README:
+the commit that added the suspect list, and the commit that added the first
+fixture partition. A reader can verify the order in one command.
 
 ---
 
@@ -1847,15 +1896,46 @@ dates); report accuracy split by day group in every D-240 table.
 
 | ID | Question | Blocks |
 |---|---|---|
-| D-053 | How is LNG cargo volume estimated, if at all? | Volume-error component of D-140 |
 | — | Do the D-021 / D-022 thresholds (`tT = 1.5 h`, min stop 1.5 h) survive on LNG loading cycles, which run 12–24 h? Re-tune on the fixture, do not inherit. | D-021, D-022 |
 | — | Is the D-117 `length >= 250` floor right? Sensitivity at 200 m and 270 m. | D-117 |
-| — | Study period start. D-006 assumes 2020. 2015 data exists and is reachable; the AVIS/AVID break at 2024-01-01 now sits *inside* the window either way (D-017). | Backfill scope |
-| — | Keep Houston, or cut it? It carries the largest data volume of the four and is the only port where congestion logic (D-025, D-030) applies. | D-006, backfill scope |
 | — | What is the observed inter-message interval distribution, split by state and `transceiver`, on the Sabine Pass fixture? D-119 cannot be given numbers until this is measured, and two corpus sources disagree by a factor of two. | D-119, and D-015 via its gap reference |
-| — | What share of departure events carry a usable `vessel_name`? This is the ceiling on D-140 recall and it has not been measured. | D-045, D-140 |
+| — | What share of departure events carry a usable `vessel_name`? This is the ceiling on D-240 recall and it has not been measured. | D-045, D-240 |
+| — | Is a ballast-to-laden `draft` change used as corroborating evidence for a detected loading? D-153 resolved volume estimation but not this. Not blocking — D-027 defines the event kinematically — but currently unruled. | D-005, D-027 |
+| — | Does the newest `csv2/csv2026` partition fall near April 2026? Determines whether D-007 accepts on two arguments or one. | D-007 |
+| — | Ratification order. Several `ACCEPTED` decisions rest on `PROPOSED` ones — see the note below. | D-004, D-050, D-117, D-144, D-027 |
 
-**Resolved since the last revision:** D-051 (withdrawn — container scope
-retired); port selection (D-006); framing (D-004); sentinel convention
-(D-114); schema contract (D-112); timezone (D-011, now ACCEPTED); vessel-level
-gap threshold (D-119 — rule set, numbers still to be measured).
+**Resolved since the last revision:** volume estimation (D-053 → D-153);
+Houston (D-106 — deferred to v2); study period start (D-007 — 2020-01-01 to
+2026-03-31); DOE split-cargo mechanism (D-144); name matching strategy
+(D-240); outage screening method (D-028); tuning discipline (D-046).
+
+**Earlier:** D-051 (withdrawn — container scope retired); framing (D-004);
+sentinel convention (D-114); schema contract (D-112); timezone (D-011);
+vessel-level gap threshold (D-119 — rule set, numbers still to be measured).
+
+---
+
+# Ratification order
+
+Four decisions are `ACCEPTED` while decisions they depend on are still
+`PROPOSED`. That inverts the dependency: precedence rule 2 makes an `ACCEPTED`
+decision binding, so a binding decision currently rests on an unratified one.
+
+| Accepted | Rests on | Status of dependency |
+|---|---|---|
+| D-106, D-153, D-240 | D-004 (framing) | PROPOSED |
+| D-153 | D-050 (no draught-based estimation) | PROPOSED |
+| D-240 | D-144 (the 105-loading figure) | PROPOSED |
+| D-114, D-112 | D-010 (raw CSV is source of record) | PROPOSED |
+
+None of this blocks Phase 1, which produces polygons and thresholds rather
+than detections. D-004 and D-050 are the two worth ratifying first: D-004
+because everything rests on it, D-050 because D-153 names it explicitly.
+D-144 and D-027 should be ratified before Phase 2, per the note in each.
+
+**A maintenance gap this exposed.** Supersession preserves history but leaves
+forward references dangling — this revision repaired seven live references to
+`SUPERSEDED` decisions (D-006→D-106 ×2, D-019→D-119 ×4, D-140→D-240 ×5,
+D-053→D-153 ×2) across six live decisions. Nothing was catching them. A short script asserting that every
+`D-NNN` cited outside a "Retained for history" block points at a decision whose
+status is not `SUPERSEDED` or `RESOLVED` would catch the next one for free.
