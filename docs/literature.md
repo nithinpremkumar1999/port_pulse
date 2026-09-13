@@ -930,6 +930,61 @@ file). Loading duration, which is assumed from domain knowledge, not
 measured.
 
 
+### OBS-PHASE1-PRE — DOE vintage re-check and NOAA Q1 2022 partition index
+
+**Sample.** `3. U.S. LNG Exports and Re-Exports Details (Jan 2016 - Jun
+2026).xlsx`, 12,094 rows, versus the 2016–2023 vintage (7,241 rows). NOAA
+`csv2/csv2022` blob index for 2022-01-01 to 2022-03-31, via the List Blobs
+REST API with pagination confirmed complete. Run 2026-09-13.
+
+**DOE schema is stable across vintages.** Identical sheet names and columns.
+`[*]` marker still absent, confirming the OBS-PHASE0B finding was not an
+artefact of one vintage.
+
+**Sabine Pass 2020–2023 is unrevised.** 1,560 rows, 1,482 distinct (Tanker,
+Date, Point of Exit) combos, 75 multi-row combos — identical in both
+vintages. **Q1 2022 remains 109 rows collapsing to 105 loadings**, same four
+splits.
+
+**One malformed row, new.** Null `Arrival/Departure Date` (1 of 12,094; was 0
+of 7,241) *and* a non-null `Tanker` on a `Mode of Transport = ISO Container`
+row, which was 100% null in the earlier vintage. Eagle LNG Partners
+Jacksonville II, Ft. Lauderdale, 2.53 MMCF. Out of scope, but the loader must
+tolerate it rather than choke.
+
+**Points of exit grew from 15 to 20 values.** New: `Plaquemines, LA` (425
+rows, from 2024-12-26), `Altamira, Tamaulipas, MX` (25), `West Palm Beach,
+FL` (13), `Golden Pass, TX` (3, from 2026-04-22), `Port of Savannah, GA` (1).
+`Sabine Pass, LA` unchanged and still distinct from `Cameron, LA` and
+`Cameron (Calcasieu Pass), LA`.
+
+**Golden Pass LNG first cargo 2026-04-22** (AL QA'IYYAH, Belgium, 3,619.46
+MMCF), then 2026-05-08 and 2026-06-25.
+
+**Altamira, Tamaulipas, MX appears in a field DOE documents as US cities and
+states.** Five sampled rows are all `Exports` by `Vessel`. Unresolved —
+either a transshipment reporting pattern or a data-entry deviation. Out of
+scope; recorded so it is not rediscovered.
+
+**NOAA Q1 2022 partitions: all 90 days present.** Sizes 105.9–235.1 MB.
+
+**Two outage-detection methods compared.** A trailing-7-day median at −2 SD
+flagged ten days: 01-29, 01-30, 02-22, 02-23, 02-24, 03-12, 03-13, 03-14,
+03-20, 03-21. Same-weekday baselining flags twelve: 01-29 to 01-31, 02-05 to
+02-10, 03-14, 03-20 to 03-21.
+
+Disagreements: 02-22 (190.1 MB) is above the February Tuesday median; 02-23
+and 02-24 sit at their weekday medians — all three are trailing-window
+artefacts. 03-12 and 03-13 are a normal weekend. **02-05 to 02-10 is a
+six-day depression the trailing method missed entirely**, e.g. 02-09 at 139.7
+against other February Wednesdays at 195.2, 208.7 and 179.6.
+
+**Not established by this run.** Whether the size anomalies correspond to
+actual message loss in the Sabine Pass box, or to national-level dips that
+leave Gulf coverage intact. Whether the DOE schema holds for the 2024–2026
+rows specifically — D4 was re-run on the 2020–2023 subset only.
+
+
 ---
 
 # Parameter cross-reference

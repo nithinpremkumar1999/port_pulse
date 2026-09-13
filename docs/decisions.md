@@ -1424,7 +1424,7 @@ of near-sequential MMSIs appearing simultaneously.
 
 ### D-106 — Port scope: three LNG terminals; Houston deferred to v2
 
-**Status:** PROPOSED | **Evidence:** OBS-PHASE0, OBS-PHASE0B
+**Status:** ACCEPTED | **Evidence:** OBS-PHASE0, OBS-PHASE0B
 **Supersedes:** D-006
 
 **Do this.** v1 covers three terminals:
@@ -1533,7 +1533,7 @@ terminal as a finding to investigate rather than a number to subtract.
 
 ### D-240 — Name matching is normalisation plus a curated alias table, never edit distance
 
-**Status:** PROPOSED | **Evidence:** OBS-PHASE0B, OBS-PHASE0
+**Status:** ACCEPTED | **Evidence:** OBS-PHASE0B, OBS-PHASE0
 **Supersedes:** D-140
 
 **Do this.** Three stages, in order:
@@ -1594,7 +1594,7 @@ publish unmatched count alongside precision and recall.
 
 ### D-153 — Cargo count is the deliverable; volume is a benchmarked extension
 
-**Status:** PROPOSED | **Evidence:** OBS-PHASE0B, SRC-DOE-FE746R
+**Status:** ACCEPTED | **Evidence:** OBS-PHASE0B, SRC-DOE-FE746R
 **Resolves:** D-053
 
 **Do this.** Report cargo count precision and recall as the headline D-004
@@ -1693,6 +1693,153 @@ indicates missed calls. It is a detector health check.
 **Caution.** This is arithmetic from DOE cargo counts, not a measurement.
 Loading duration has not been observed yet. Confirm in Phase 1 and revise if
 the observed duration distribution is materially shorter than assumed.
+
+### D-007 — Study window is 2020-01-01 to 2026-03-31
+
+**Status:** PROPOSED | **Evidence:** OBS-PHASE1-PRE, OBS-PHASE0B
+**Amends the window assumed in:** D-106
+
+**Do this.** The study window closes **2026-03-31**. Terminal scope is
+unchanged from D-106 (Sabine Pass, Freeport, Corpus Christi).
+
+**Why.** OBS-PHASE0B found Golden Pass LNG entering service with its first
+cargo on **2026-04-22**. Golden Pass sits inside the Sabine Pass clip box by
+construction — D-106 already records this and flags it as an explicit
+"revisit if" trigger. From that date the box contains two active LNG
+terminals, and terminal attribution stops being a property of the box and
+becomes a property of the berth polygons.
+
+That is not merely more work. Berth polygons are derived from observed
+stationary density (D-013), and **no amount of data derives a polygon for a
+terminal that was not operating during the derivation window.** Golden Pass
+berths cannot be located from 2022 data. Including 2026 Q2 would mean a
+polygon set valid for part of the window only, silently attributing Golden
+Pass loadings to Sabine Pass.
+
+**A second constraint lands on nearly the same date.** D-001's latency
+analysis puts the NOAA archive 145–165 days behind real time. From the
+current date that places the newest available partition around the start of
+April 2026 regardless. Verify this against the `csv2/csv2026` index before
+treating it as settled, but if it holds, the window end is forced by the
+archive and Golden Pass merely coincides.
+
+**Rejected.** Time-varying polygons with effective-from dates, and Golden
+Pass as a fourth terminal. Both are more correct and neither is worth ten
+weeks of the stalest data in the series. This is the better v2 change, not a
+v1 requirement.
+
+**Revisit if.** v2 scope opens. Golden Pass (from 2026-04-22) and Plaquemines
+(from 2024-12-26, 425 cargoes to 2026-06-30) are the two obvious additions,
+and Plaquemines needs no clip-box change at all — it is on the Mississippi,
+outside every box in scope.
+
+**Test.** `test_no_partition_after_window_end`.
+
+---
+
+### D-028 — *[Ingest]* Outage detection baselines on the same weekday, never a trailing window
+
+**Status:** PROPOSED | **Evidence:** OBS-PHASE1-PRE
+**Area:** ingest and silver — ID borrowed from the detection block, which the
+ID rule directs when the primary block is full.
+
+**Do this.** Flag a candidate partition outage by comparing a day's file size
+against the **median of the same weekday** over a fixed reference window
+(the containing quarter, or a trailing eight same-weekday observations).
+State the deviation threshold explicitly and log every flagged day with its
+deviation.
+
+**Do not use a trailing N-day median.** It fails in both directions.
+
+**Why — false positives.** Commercial traffic has genuine weekly
+seasonality, so a trailing window straddling a weekend has its median pulled
+down only partially and flags the weekend by construction. In OBS-PHASE1-PRE,
+a trailing-7-day method flagged 2022-02-22, 02-23 and 02-24. Against their own
+weekday medians, 02-22 is *above* median and the other two sit on it. Three
+normal days flagged.
+
+**Why — false negatives, which is worse.** A sustained degradation becomes
+its own baseline within one window length and then disappears. The same
+method missed **2022-02-05 to 02-10 entirely** — six consecutive days, four
+of them weekdays, 17–30% below their weekday medians. By 02-07 the trailing
+window had already absorbed the drop.
+
+**Observed effect on the two methods, Q1 2022:**
+
+| Method | Days flagged | True positives | False positives | Missed |
+|---|---|---|---|---|
+| Trailing 7-day median, −2 SD | 10 | 7 | 3 | 6 |
+| Same-weekday median | 12 | 12 | 0 | 0 |
+
+**Caution — this is a proxy for a proxy.** Compressed byte count confounds
+vessel count, message count and compression ratio, and a national-level dip
+need not touch the Gulf receivers at all. A size-derived suspect list is a
+**hypothesis to confirm**, never a conclusion. Confirm it in the partition
+itself with in-box message counts per day, and record both figures.
+
+**Relationship to D-119.** D-119 governs coverage gaps measured *from message
+data* after ingest. This decision governs partition screening *from the blob
+index* before download. They are complementary: this one tells you which days
+to look at, D-119 tells you what actually happened in them. A day flagged
+here that D-119 finds healthy is a false positive to record, not to hide.
+
+**Test.** `test_outage_detection_uses_weekday_baseline` (static check that no
+trailing-window median appears in screening code);
+`test_sustained_degradation_is_flagged` on a synthetic six-day depression;
+`test_normal_weekend_is_not_flagged`.
+
+---
+
+### D-046 — Thresholds are tuned on the clean subset; the degraded-day list is committed before ingest
+
+**Status:** PROPOSED | **Evidence:** OBS-PHASE1-PRE
+
+**Do this.** Two rules, both binding on Phase 1.
+
+1. **Commit the suspect-day list before ingesting the partitions.** It lives
+   in `docs/` with the deviation figures that produced it and the date it was
+   written.
+2. **Tune every empirical threshold on the clean subset only** — D-021's
+   `tT`, D-022's minimum stop duration, D-119's state-conditioned gap
+   percentiles. Validate against **all** days in the fixture, clean and
+   suspect together, and report matched-versus-missed split by the two
+   groups.
+
+**Why rule 1.** If the detector finds 96 of 105 loadings and the outage list
+is produced afterwards, "nine misses fell on outage days" is unfalsifiable
+and reads as excuse-making. Committed beforehand, the identical claim is a
+prediction that happened to hold. Same evidence, entirely different standing.
+
+**Why rule 2.** Thresholds tuned on degraded days silently compensate for
+missing data — a gap percentile fitted through an outage widens to absorb it,
+and the detector then appears to work. That failure looks exactly like
+success and is invisible in the headline number.
+
+**Q1 2022 suspect list (12 of 90 days, 13%):**
+
+| Days | Deviation vs same weekday |
+|---|---|
+| 2022-01-29 to 01-31 | −45%, −40%, −33% |
+| 2022-02-05 to 02-10 | −17% to −30% |
+| 2022-03-14 | −29% |
+| 2022-03-20 to 03-21 | −30%, −41% |
+
+Clean subset: 78 days.
+
+**Why the fixture keeps its outages rather than moving to a cleaner quarter.**
+D-119 requires an outage taxonomy and degraded-week marking. That code cannot
+be tested on clean data. A fixture containing real degradation is more useful
+than one without, provided tuning and validation are separated as above.
+
+**Caution — the list must be able to fail.** If detection performance on the
+78 clean days is no better than on the 12 suspect days, the outage hypothesis
+is wrong: the suspect list is withdrawn and the misses are a detector problem.
+Do not defend a pre-registered list against contrary evidence; that would
+convert an honesty mechanism into a rationalisation.
+
+**Test.** `test_tuning_excludes_suspect_days`;
+`test_suspect_list_committed_before_fixture_ingest` (compares git commit
+dates); report accuracy split by day group in every D-240 table.
 
 ---
 
